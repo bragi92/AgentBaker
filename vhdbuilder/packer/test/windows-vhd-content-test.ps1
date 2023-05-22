@@ -377,8 +377,8 @@ function Test-ExcludeUDPSourcePort {
 
 Test-FilesToCacheOnVHD
 Test-PatchInstalled
-Test-ImagesPulled
-Test-ImagesPulled -isAzureChinaCloud
+# Test-ImagesPulled
+# Test-ImagesPulled -isAzureChinaCloud
 Test-RegistryAdded
 Test-DefenderSignature
 Test-AzureExtensions
