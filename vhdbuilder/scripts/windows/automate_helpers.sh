@@ -13,6 +13,8 @@ create_branch() {
     # Create PR branch
     echo "Create branch named $1"
     echo "showing branches"
+    git show HEAD
+    git fetch
     git log
     git branch
     git checkout master
