@@ -12,13 +12,7 @@ set_git_config() {
 create_branch() {
     # Create PR branch
     echo "Create branch named $1"
-    echo "showing branches"
-    git show HEAD
-    set +x
-    git fetch
-    set -x
-    git log
-    git branch
+    git fetch origin master
     git checkout master
     git pull
     git checkout -b $1
