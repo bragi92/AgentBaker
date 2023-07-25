@@ -14,7 +14,9 @@ create_branch() {
     echo "Create branch named $1"
     echo "showing branches"
     git show HEAD
+    set +x
     git fetch
+    set -x
     git log
     git branch
     git checkout master
