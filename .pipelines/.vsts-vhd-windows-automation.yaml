@@ -8,6 +8,10 @@ parameters:
   displayName: Image Bump + Branch Cutting
   type: boolean
   default: true
+- name: ReleaseNotes
+  displayName: Release Notes
+  type: boolean
+  default: true
 
 steps:
 - bash: |
