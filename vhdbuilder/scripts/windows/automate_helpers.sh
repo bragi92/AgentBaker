@@ -59,7 +59,7 @@ create_pull_request() {
      jq '.[] | select(.title == "chore: automated PR to update '$4' for '$1' windows VHD")')
     
     if [[ -n $result ]]; then
-        echo "Pull request at head '$3' with title chore: automated PR to update '$4' for '$1' windows VHD existed already"
+        echo "Pull request at head '$3' with title chore: automated PR to bump windows image version to '$1' existed already"
         echo "Error: you cannot run image version bumping twice"
         exit 1
     else
@@ -67,7 +67,7 @@ create_pull_request() {
             -H "Authorization: token $github_access_token" \
             -H "Content-Type: application/json" \
             -d '{
-                "title": "chore: automated PR to update '$4' for '$1' windows VHD",
+                "title": "chore: automated PR to bump windows image version to '$1'",
                 "body": "This is an automated PR to '$4' for the windows VHD release with image version '$1'",
                 "head": "'$3'",
                 "base": "master"
