@@ -1,4 +1,4 @@
-package winnote
+package main
 
 import (
 	"bufio"
