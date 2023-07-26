@@ -32,8 +32,8 @@ generate_release_notes() {
     echo "SKUs for release notes are $included_skus"
     go run vhdbuilder/release-notes/autonotes/main.go --build $build_id --include ${included_skus%?}
     ls vhdbuilder/release-notes/autonotes/main.go
-    ls vhdbuilder/release-notes/winautonotes/main.go
-    go run vhdbuilder/release-notes/winautonotes/main.go --build $build_id --include ${included_skus%?}
+    #ls vhdbuilder/release-notes/winautonotes/main.go
+    #go run vhdbuilder/release-notes/winautonotes/main.go --build $build_id --include ${included_skus%?}
 }
 
 set_git_config $github_user_name
