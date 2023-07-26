@@ -17,14 +17,14 @@ pr_title="ReleaseNotes"
 
 generate_release_notes() {
     echo "Build ID for the release is $build_id"
-        for artifact in $(az pipelines runs artifact list --run-id $build_id | jq -r '.[].name'); do    # Retrieve what artifacts were published
-            if [[ $artifact == *"vhd-release-notes"* ]]; then
-                sku=$(echo $artifact | cut -d "-" -f4-) # Format of artifact is vhd-release-notes-<name of sku>
-                included_skus+="$sku,"
-            fi
-        done
-        echo "SKUs for release notes are $included_skus"
-        go run vhdbuilder/release-notes/autonotes/main.go --build $build_id --date $image_version --include ${included_skus%?}
+    for artifact in $(az pipelines runs artifact list --run-id $build_id | jq -r '.[].name'); do    # Retrieve what artifacts were published
+        if [[ $artifact == *"vhd-release-notes"* ]]; then
+            sku=$(echo $artifact | cut -d "-" -f4-) # Format of artifact is vhd-release-notes-<name of sku>
+            included_skus+="$sku,"
+        fi
+    done
+    echo "SKUs for release notes are $included_skus"
+    go run vhdbuilder/release-notes/autonotes/main.go --build $build_id --date $image_version --include ${included_skus%?}
 }
 
 set_git_config
