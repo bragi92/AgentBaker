@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -euxo pipefail
+set -euxo pipefail
 
 set_git_config() {
     # git config needs to be set in the agent
@@ -29,8 +29,8 @@ create_pull_request() {
     git add .
 
     if [[ $4 == "ReleaseNotes" ]]; then
-        echo "to add git commit chore: release notes for release $1"
-        git commit -m "chore: release notes for release $1"
+        echo "to add git commit chore: windows release notes for release $1"
+        git commit -m "chore: windows release notes for release $1"
     else
         echo "to add git commit chore: bumping windows image version to $1"
         git commit -m "chore: bumping windows image version to $1"
@@ -52,28 +52,50 @@ create_pull_request() {
     #    ],
     #    "documentation_url": "https://docs.github.com/rest/pulls/pulls#create-a-pull-request"
     # }
-
-    result=$(curl -H "Authorization: token $github_access_token" \
-     -H "Accept: application/vnd.github.v3+json" \
-    "https://api.github.com/repos/Azure/AgentBaker/pulls?state=open&head=Azure:$3" |\
-     jq '.[] | select(.title == "chore: automated PR to bump windows image version to '$1'")')
-    
-    if [[ -n $result ]]; then
-        echo "Pull request at head '$3' with title \"chore: automated PR to bump windows image version to '$1' existed already\""
-        echo "Error: you cannot run image version bumping twice"
-        exit 1
+    if [[ $4 == "ReleaseNotes" ]]; then
+        result=$(curl -H "Authorization: token $github_access_token" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/Azure/AgentBaker/pulls?state=open&head=Azure:$3" |\
+        jq '.[] | select(.title == "chore: automated PR to update windows release notes for version '$1'")')
+        if [[ -n $result ]]; then
+            echo "Pull request at head '$3' with title \"chore: automated PR to update windows release notes for version '$1'\" existed already"
+            echo "Error: you cannot run image version bumping twice"
+            exit 1
+        else
+            curl -X POST \
+                -H "Authorization: token $github_access_token" \
+                -H "Content-Type: application/json" \
+                -d '{
+                    "title": "chore: automated PR to update windows release notes for version '$1'",
+                    "body": "This is an automated PR to '$4' for the windows VHD release with image version '$1'",
+                    "head": "'$3'",
+                    "base": "master"
+                }' \
+                https://api.github.com/repos/Azure/AgentBaker/pulls
+        fi
     else
-        curl -X POST \
-            -H "Authorization: token $github_access_token" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "title": "chore: automated PR to bump windows image version to '$1'",
-                "body": "This is an automated PR to bump windows image version to '$1'",
-                "head": "'$3'",
-                "base": "master"
-            }' \
-            https://api.github.com/repos/Azure/AgentBaker/pulls
-    fi    
+        result=$(curl -H "Authorization: token $github_access_token" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/Azure/AgentBaker/pulls?state=open&head=Azure:$3" |\
+        jq '.[] | select(.title == "chore: automated PR to bump windows image version to '$1'")')
+        if [[ -n $result ]]; then
+            echo "Pull request at head '$3' with title \"chore: automated PR to bump windows image version to '$1'\" existed already"
+            echo "Error: you cannot run image version bumping twice"
+            exit 1
+        else
+            curl -X POST \
+                -H "Authorization: token $github_access_token" \
+                -H "Content-Type: application/json" \
+                -d '{
+                    "title": "chore: automated PR to bump windows image version to '$1'",
+                    "body": "This is an automated PR to '$4' for the windows VHD release with image version '$1'",
+                    "head": "'$3'",
+                    "base": "master"
+                }' \
+                https://api.github.com/repos/Azure/AgentBaker/pulls
+        fi
+    fi
+
     set -x
 
     git checkout master # Checkout to master for subsequent stages of the pipeline

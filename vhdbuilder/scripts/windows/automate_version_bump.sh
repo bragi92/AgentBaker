@@ -26,9 +26,8 @@ find_latest_image_version() {
     branch_name=wsimageBump/$new_image_version
 }
 
-# This function replaces the old Windows 2019 & Windows 2022 base image version with the latest version found by az vm image show in windows-image.env
+# This function replaces the old Windows 2019 & Windows 2022 (gen1/gen2) base image version with the latest version found by az vm image show in windows-image.env
 update_image_version() {
-    # [to-do] remove \n; this was just added to test if sed actually works because the image version was already latest as of the time developing this module
     line=$(grep "WINDOWS_2019_BASE_IMAGE_VERSION=" vhdbuilder/packer/windows-image.env)
     echo $line
     sed -i "s/$line/WINDOWS_2019_BASE_IMAGE_VERSION=$latest_image_version_2019/g" vhdbuilder/packer/windows-image.env
@@ -40,11 +39,6 @@ update_image_version() {
     line=$(grep "WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=" vhdbuilder/packer/windows-image.env)
     echo $line
     sed -i "s/$line/WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=$latest_image_version_2022_g2/g" vhdbuilder/packer/windows-image.env
-
-    # Jul 18, 2023: the version in windows-image.env is already up-to-date (7B)
-    # to test the above scripts, the author has created a fake windows-image.env with old image version (from June 2023)
-    # and run the shell in local environment. "cat windows-image.env" showed that the version was updated to *.230710 successfully.
-    # echo >> vhdbuilder/packer/windows-image.env
 }
 
 create_image_bump_pr() {
