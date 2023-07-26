@@ -16,6 +16,8 @@ set +x
 github_access_token=$2
 set -x
 
+github_user_name=$3
+
 branch_name=releaseNotes/$image_version
 pr_title="ReleaseNotes"
 
@@ -31,7 +33,7 @@ generate_release_notes() {
     go run vhdbuilder/release-notes/autonotes/winnote.go --build $build_id --include ${included_skus%?}
 }
 
-set_git_config
+set_git_config $github_user_name
 if [ `git branch --list $branch_name` ]; then
     git checkout $branch_name
     git pull origin
