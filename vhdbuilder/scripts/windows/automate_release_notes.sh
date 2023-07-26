@@ -3,16 +3,18 @@ set -euxo pipefail
 
 source vhdbuilder/scripts/windows/automate_helpers.sh
 
-echo "Image version for release notes is $1"
+echo "Build Id is $1"
 
-image_version=$1
-build_ids=$2
+latest_image_version_2019=$(az vm image show --urn MicrosoftWindowsServer:WindowsServer:2019-Datacenter-Core-smalldisk:latest --query 'id' -o tsv | awk -F '/' '{print $NF}')
+image_version=$(echo "$latest_image_version_2019" | cut -c 12-)
+  
+build_id=$1
 
 set +x
-github_access_token=$3
+github_access_token=$2
 set -x
 
-branch_name=releaseNotes/$1
+branch_name=releaseNotes/$image_version
 pr_title="ReleaseNotes"
 
 generate_release_notes() {
@@ -24,7 +26,7 @@ generate_release_notes() {
         fi
     done
     echo "SKUs for release notes are $included_skus"
-    go run vhdbuilder/release-notes/autonotes/main.go --build $build_id --date $image_version --include ${included_skus%?}
+    go run vhdbuilder/release-notes/autonotes/winnote.go --build $build_id --include ${included_skus%?}
 }
 
 set_git_config

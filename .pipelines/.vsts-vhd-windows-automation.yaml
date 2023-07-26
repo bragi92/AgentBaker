@@ -7,13 +7,26 @@ parameters:
 - name: ImageBump
   displayName: Image Bump + Branch Cutting
   type: boolean
-  default: true
+  default: false
 - name: ReleaseNotes
   displayName: Release Notes
   type: boolean
   default: true
 
 steps:
+- bash: |
+        echo "Removing existing go environment"
+        sudo rm -r /usr/local/go
+        GOLANG_VERSION=$(curl -s 'https://go.dev/VERSION?m=text')
+        echo "Downloading ${GOLANG_VERSION}"
+        curl -O "https://dl.google.com/go/${GOLANG_VERSION}.linux-amd64.tar.gz"
+
+        echo "unpacking go"
+        sudo mkdir -p /usr/local/go
+        sudo chown -R "$(whoami):$(whoami)" /usr/local/go 
+        sudo tar -xvf "${GOLANG_VERSION}.linux-amd64.tar.gz" -C /usr/local
+        rm "${GOLANG_VERSION}.linux-amd64.tar.gz"
+  displayName: 'Clean up go environment'
 - bash: |
         az extension add -n azure-devops
         echo $MAPPED_ADO_PAT | az devops login --organization=https://dev.azure.com/msazure
@@ -28,4 +41,11 @@ steps:
         MAPPED_GITHUB_PAT: $(GITHUB_PAT)
   displayName: 'Image Version Bumping'
   condition: eq('${{ parameters.ImageBump }}', true)
+- bash: |
+        echo "PR for Release Notes"
+        /bin/bash vhdbuilder/scripts/automate_release_notes.sh $BUILD_ID $MAPPED_GITHUB_PAT
+  env:
+        MAPPED_GITHUB_PAT: $(GITHUB_PAT)
+  displayName: 'Release Notes'
+  condition: eq('${{ parameters.ReleaseNotes }}', true)
   
