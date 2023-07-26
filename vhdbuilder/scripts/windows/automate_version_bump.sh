@@ -44,7 +44,7 @@ update_image_version() {
     # Jul 18, 2023: the version in windows-image.env is already up-to-date (7B)
     # to test the above scripts, the author has created a fake windows-image.env with old image version (from June 2023)
     # and run the shell in local environment. "cat windows-image.env" showed that the version was updated to *.230710 successfully.
-    echo >> vhdbuilder/packer/windows-image.env
+    # echo >> vhdbuilder/packer/windows-image.env
 }
 
 create_image_bump_pr() {
