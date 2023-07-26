@@ -31,15 +31,15 @@ update_image_version() {
     # [to-do] remove \n; this was just added to test if sed actually works because the image version was already latest as of the time developing this module
     line=$(grep "WINDOWS_2019_BASE_IMAGE_VERSION=" vhdbuilder/packer/windows-image.env)
     echo $line
-    sed -i "s/$line/WINDOWS_2019_BASE_IMAGE_VERSION=$latest_image_version_2019\n/g" vhdbuilder/packer/windows-image.env
+    sed -i "s/$line/WINDOWS_2019_BASE_IMAGE_VERSION=$latest_image_version_2019/g" vhdbuilder/packer/windows-image.env
 
     line=$(grep "WINDOWS_2022_BASE_IMAGE_VERSION=" vhdbuilder/packer/windows-image.env)
     echo $line
-    sed -i "s/$line/WINDOWS_2022_BASE_IMAGE_VERSION=$latest_image_version_2022\n/g" vhdbuilder/packer/windows-image.env
+    sed -i "s/$line/WINDOWS_2022_BASE_IMAGE_VERSION=$latest_image_version_2022/g" vhdbuilder/packer/windows-image.env
 
     line=$(grep "WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=" vhdbuilder/packer/windows-image.env)
     echo $line
-    sed -i "s/$line/WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=$latest_image_version_2022_g2\n/g" vhdbuilder/packer/windows-image.env
+    sed -i "s/$line/WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=$latest_image_version_2022_g2/g" vhdbuilder/packer/windows-image.env
 
     # Jul 18, 2023: the version in windows-image.env is already up-to-date (7B)
     # to test the above scripts, the author has created a fake windows-image.env with old image version (from June 2023)
