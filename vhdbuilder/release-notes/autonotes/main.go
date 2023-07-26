@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -23,15 +25,14 @@ import (
 *** - a comma-separated list of VHD names to include/ignore.
 ***
 *** Examples:
-*** # download ONLY 1804-gen2-gpu release notes from this run ID.
-*** autonotes --build 40968951 --include 1804-gen2-gpu
+*** # download ONLY 2019-containerd release notes from this run ID.
+*** autonotes --build 76289801 --include 2019-containerd
 ***
-*** # download everything EXCEPT 1804-gen2-gpu release notes from this run ID.
-*** autonotes --build 40968951 --ignore 1804-gen2-gpu
+*** # download everything EXCEPT 2022-containerd-gen2 release notes from this run ID.
+*** autonotes --build 76289801 --ignore 2022-containerd-gen2
 ***
-*** # download ONLY 1604,1804,1804-containerd release notes from this run ID.
-*** autonotes --build 40968951 --include 1604,1804,1804-containerd
-***
+*** # download ONLY 2022-containerd,2022-containerd-gen2 release notes from this run ID.
+*** autonotes --build 76289801 --include 2022-containerd,2022-containerd-gen2
 **/
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 	flag.StringVar(&fl.include, "include", "", "only include this list of VHD release notes.")
 	flag.StringVar(&fl.ignore, "ignore", "", "ignore release notes for these VHDs")
 	flag.StringVar(&fl.path, "path", defaultPath, "output path to root of VHD notes")
-	flag.StringVar(&fl.date, "date", defaultDate, "date of VHD build in format YYYYMM.DD.0")
+	flag.StringVar(&fl.date, "date", defaultDate, "date of VHD build in format YYMMDD")
 
 	flag.Parse()
 
@@ -80,6 +81,30 @@ func run(ctx context.Context, cancel context.CancelFunc, fl *flags) []error {
 
 	enforceInclude := len(include) > 0
 
+	// Get windows base image versions frpm the updated windows-image.env
+	var wsImageVersionFilePath = filepath.Join("vhdbuilder", "packer", "windows-image.env")
+	file, err := os.Open(wsImageVersionFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "WINDOWS_2019_BASE_IMAGE_VERSION=") {
+			imageVersions["2019-containerd"] = strings.Split(line, "=")[1]
+		} else if strings.Contains(line, "WINDOWS_2022_BASE_IMAGE_VERSION=") {
+			imageVersions["2022-containerd"] = strings.Split(line, "=")[1]
+		} else if strings.Contains(line, "WINDOWS_2022_GEN2_BASE_IMAGE_VERSION=") {
+			imageVersions["2022-containerd-gen2"] = strings.Split(line, "=")[1]
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
 	artifactsToDownload := map[string]string{}
 	for key, value := range artifactToPath {
 		if ignore[key] {
@@ -97,7 +122,9 @@ func run(ctx context.Context, cancel context.CancelFunc, fl *flags) []error {
 	var done = make(chan struct{})
 
 	for sku, path := range artifactsToDownload {
-		go getReleaseNotes(sku, path, fl, errc, done)
+		length := len(imageVersions[sku])
+		version := imageVersions[sku][0:length - 6] + fl.date
+		go getReleaseNotes(sku, path, fl, errc, done, version)
 	}
 
 	var errs []error
@@ -114,7 +141,7 @@ func run(ctx context.Context, cancel context.CancelFunc, fl *flags) []error {
 	return errs
 }
 
-func getReleaseNotes(sku, path string, fl *flags, errc chan<- error, done chan<- struct{}) {
+func getReleaseNotes(sku, path string, fl *flags, errc chan<- error, done chan<- struct{}, version string) {
 	defer func() { done <- struct{}{} }()
 
 	// working directory, need one per sku because the file name is
@@ -130,23 +157,9 @@ func getReleaseNotes(sku, path string, fl *flags, errc chan<- error, done chan<-
 	imageListName := fmt.Sprintf("vhd-image-bom-%s", sku)
 	imageListFileIn := filepath.Join(tmpdir, "image-bom.json")
 
-	trivyReportName := fmt.Sprintf("trivy-report-%s", sku)
-	trivyReportFileIn := filepath.Join(tmpdir, "trivy-report.json")
-	trivyTableName := fmt.Sprintf("trivy-images-table-%s", sku)
-	trivyReportTableIn := filepath.Join(tmpdir, "trivy-images-table.txt")
-
 	artifactsDirOut := filepath.Join(fl.path, path)
-	releaseNotesFileOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s.txt", fl.date))
-	imageListFileOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s-image-list.json", fl.date))
-
-	trivyReportFileOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s-trivy-report.json", fl.date))
-	trivyReportTableOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s-trivy-images-table.txt", fl.date))
-
-	latestReleaseNotesFile := filepath.Join(artifactsDirOut, "latest.txt")
-	latestImageListFile := filepath.Join(artifactsDirOut, "latest-image-list.json")
-
-	latestTrivyReportFile := filepath.Join(artifactsDirOut, "latest-trivy-report.json")
-	latestTrivyReportTable := filepath.Join(artifactsDirOut, "latest-trivy-images-table.txt")
+	releaseNotesFileOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s.txt", version))
+	imageListFileOut := filepath.Join(artifactsDirOut, fmt.Sprintf("%s-image-list.json", version))
 
 	if err := os.MkdirAll(filepath.Dir(artifactsDirOut), 0644); err != nil {
 		errc <- fmt.Errorf("failed to create parent directory %s with error: %s", artifactsDirOut, err)
@@ -173,16 +186,6 @@ func getReleaseNotes(sku, path string, fl *flags, errc chan<- error, done chan<-
 		return
 	}
 
-	data, err := os.ReadFile(releaseNotesFileOut)
-	if err != nil {
-		errc <- fmt.Errorf("failed to read file %s for copying, err: %s", releaseNotesFileOut, err)
-	}
-
-	err = os.WriteFile(latestReleaseNotesFile, data, 0644)
-	if err != nil {
-		errc <- fmt.Errorf("failed to write file %s for copying, err: %s", releaseNotesFileOut, err)
-	}
-
 	cmd = exec.Command("az", "pipelines", "runs", "artifact", "download", "--run-id", fl.build, "--path", tmpdir, "--artifact-name", imageListName)
 	if stdout, err := cmd.CombinedOutput(); err != nil {
 		if err != nil {
@@ -194,62 +197,6 @@ func getReleaseNotes(sku, path string, fl *flags, errc chan<- error, done chan<-
 	if err := os.Rename(imageListFileIn, imageListFileOut); err != nil {
 		errc <- fmt.Errorf("failed to rename file %s to %s, err: %s", imageListFileIn, imageListFileOut, err)
 		return
-	}
-
-	data, err = os.ReadFile(imageListFileOut)
-	if err != nil {
-		errc <- fmt.Errorf("failed to read file %s for copying, err: %s", imageListFileOut, err)
-	}
-
-	err = os.WriteFile(latestImageListFile, data, 0644)
-	if err != nil {
-		errc <- fmt.Errorf("failed to write file %s for copying, err: %s", latestImageListFile, err)
-	}
-
-	cmd = exec.Command("az", "pipelines", "runs", "artifact", "download", "--run-id", fl.build, "--path", tmpdir, "--artifact-name", trivyReportName)
-	if stdout, err := cmd.CombinedOutput(); err != nil {
-		if err != nil {
-			errc <- fmt.Errorf("failed to download az devops trivy report for sku %s, err: %s, output: %s", sku, err, string(stdout))
-		}
-		return
-	}
-
-	if err := os.Rename(trivyReportFileIn, trivyReportFileOut); err != nil {
-		errc <- fmt.Errorf("failed to rename file %s to %s, err: %s", trivyReportFileIn, trivyReportFileOut, err)
-		return
-	}
-
-	data, err = os.ReadFile(trivyReportFileOut)
-	if err != nil {
-		errc <- fmt.Errorf("failed to read file %s for copying, err: %s", trivyReportFileOut, err)
-	}
-
-	err = os.WriteFile(latestTrivyReportFile, data, 0644)
-	if err != nil {
-		errc <- fmt.Errorf("failed to write file %s for copying, err: %s", latestTrivyReportFile, err)
-	}
-
-	cmd = exec.Command("az", "pipelines", "runs", "artifact", "download", "--run-id", fl.build, "--path", tmpdir, "--artifact-name", trivyTableName)
-	if stdout, err := cmd.CombinedOutput(); err != nil {
-		if err != nil {
-			errc <- fmt.Errorf("failed to download az devops trivy report table for sku %s, err: %s, output: %s", sku, err, string(stdout))
-		}
-		return
-	}
-
-	if err := os.Rename(trivyReportTableIn, trivyReportTableOut); err != nil {
-		errc <- fmt.Errorf("failed to rename file %s to %s, err: %s", trivyReportTableIn, trivyReportTableOut, err)
-		return
-	}
-
-	data, err = os.ReadFile(trivyReportTableOut)
-	if err != nil {
-		errc <- fmt.Errorf("failed to read file %s for copying, err: %s", trivyReportTableOut, err)
-	}
-
-	err = os.WriteFile(latestTrivyReportTable, data, 0644)
-	if err != nil {
-		errc <- fmt.Errorf("failed to write file %s for copying, err: %s", latestTrivyReportTable, err)
 	}
 }
 
@@ -273,32 +220,14 @@ type flags struct {
 }
 
 var defaultPath = filepath.Join("vhdbuilder", "release-notes")
-var defaultDate = strings.Split(time.Now().Format("200601.02"), " ")[0] + ".0"
-
+var defaultDate = time.Now().Format("060102")
+var imageVersions = make(map[string]string)
+	
 // why does ubuntu use subfolders and mariner doesn't
 // there are dependencies on the folder structure but it would
 // be nice to fix this.
 var artifactToPath = map[string]string{
-	"1804-containerd":                   filepath.Join("AKSUbuntu", "gen1", "1804containerd"),
-	"1804-gen2-containerd":              filepath.Join("AKSUbuntu", "gen2", "1804containerd"),
-	"1804-gpu-containerd":               filepath.Join("AKSUbuntu", "gen1", "1804gpucontainerd"),
-	"1804-gen2-gpu-containerd":          filepath.Join("AKSUbuntu", "gen2", "1804gpucontainerd"),
-	"1804-fips-containerd":              filepath.Join("AKSUbuntu", "gen1", "1804fipscontainerd"),
-	"1804-fips-gen2-containerd":         filepath.Join("AKSUbuntu", "gen2", "1804fipscontainerd"),
-	"2004-fips-containerd":              filepath.Join("AKSUbuntu", "gen1", "2004fipscontainerd"),
-	"2004-fips-gen2-containerd":         filepath.Join("AKSUbuntu", "gen2", "2004fipscontainerd"),
-	"marinerv1":                         filepath.Join("AKSCBLMariner", "gen1"),
-	"marinerv1-gen2":                    filepath.Join("AKSCBLMariner", "gen2"),
-	"marinerv2-gen1-fips":               filepath.Join("AKSCBLMarinerV2", "gen1fips"),
-	"marinerv2-gen2-fips":               filepath.Join("AKSCBLMarinerV2", "gen2fips"),
-	"marinerv2-gen2":                    filepath.Join("AKSCBLMarinerV2", "gen2"),
-	"marinerv2-gen2-kata":               filepath.Join("AKSCBLMarinerV2", "gen2kata"),
-	"marinerv2-gen2-arm64":              filepath.Join("AKSCBLMarinerV2", "gen2arm64"),
-	"marinerv2-gen2-trustedlaunch":      filepath.Join("AKSCBLMarinerV2", "gen2tl"),
-	"marinerv2-gen2-kata-trustedlaunch": filepath.Join("AKSCBLMarinerV2", "gen2katatl"),
-	"2004-cvm-gen2-containerd":          filepath.Join("AKSUbuntu", "gen2", "2004cvmcontainerd"),
-	"2204-containerd":                   filepath.Join("AKSUbuntu", "gen1", "2204containerd"),
-	"2204-gen2-containerd":              filepath.Join("AKSUbuntu", "gen2", "2204containerd"),
-	"2204-arm64-gen2-containerd":        filepath.Join("AKSUbuntu", "gen2", "2204arm64containerd"),
-	"2204-tl-gen2-containerd":           filepath.Join("AKSUbuntu", "gen2", "2204tlcontainerd"),
+	"2019-containerd":                filepath.Join("AKSWindows", "2019-containerd"),
+	"2022-containerd":                filepath.Join("AKSWindows", "2022-containerd"),
+	"2022-containerd-gen2":           filepath.Join("AKSWindows", "2022-containerd-gen2"),	
 }
