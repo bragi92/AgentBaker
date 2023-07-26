@@ -3,6 +3,8 @@ set -euxo pipefail
 
 source vhdbuilder/scripts/windows/automate_helpers.sh
 
+az login --identity
+
 echo "Build Id is $1"
 
 latest_image_version_2019=$(az vm image show --urn MicrosoftWindowsServer:WindowsServer:2019-Datacenter-Core-smalldisk:latest --query 'id' -o tsv | awk -F '/' '{print $NF}')
