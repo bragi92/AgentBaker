@@ -56,7 +56,7 @@ create_pull_request() {
     result=$(curl -H "Authorization: token $github_access_token" \
      -H "Accept: application/vnd.github.v3+json" \
     "https://api.github.com/repos/Azure/AgentBaker/pulls?state=open&head=Azure:$3" |\
-     jq '.[] | select(.title == "chore: automated PR to update '$4' for '$1' windows VHD")')
+     jq '.[] | select(.title == "chore: automated PR to bump windows image version to '$1' existed already")')
     
     if [[ -n $result ]]; then
         echo "Pull request at head '$3' with title chore: automated PR to bump windows image version to '$1' existed already"
