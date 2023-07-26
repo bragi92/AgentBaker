@@ -43,7 +43,7 @@ steps:
   condition: eq('${{ parameters.ImageBump }}', true)
 - bash: |
         echo "PR for Release Notes"
-        /bin/bash vhdbuilder/scripts/automate_release_notes.sh $BUILD_ID $MAPPED_GITHUB_PAT
+        /bin/bash vhdbuilder/scripts/windows/automate_release_notes.sh $BUILD_ID $MAPPED_GITHUB_PAT
   env:
         MAPPED_GITHUB_PAT: $(GITHUB_PAT)
   displayName: 'Release Notes'
