@@ -219,7 +219,7 @@ try
     }
 
     # This involes using proxy, log the config before fetching packages
-    Write-Log "PrivateEgressProxyAddress is '$global:PrivateEgressProxyAddress'"
+    Write-Log "private egress proxy address is '$global:PrivateEgressProxyAddress'"
     # TODO update to use proxy
 
     $WindowsCSEScriptsPackage = "aks-windows-cse-scripts-v0.0.29.zip"
