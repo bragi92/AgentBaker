@@ -1715,7 +1715,7 @@ CONTAINERD_CONFIG_CONTENT="{{GetContainerdConfigContent}}"
 CONTAINERD_CONFIG_NO_GPU_CONTENT="{{GetContainerdConfigNoGPUContent}}"
 IS_KATA="{{IsKata}}"
 SYSCTL_CONTENT="{{GetSysctlContent}}"
-PRIVATE_EGRESS_PROXY_ADDRESS="{{PrivateEgressProxyAddress}}"
+PRIVATE_EGRESS_PROXY_ADDRESS="{{GetPrivateEgressProxyAddress}}"
 /usr/bin/nohup /bin/bash -c "/bin/bash /opt/azure/containers/provision_start.sh"`)
 
 func linuxCloudInitArtifactsCse_cmdShBytes() ([]byte, error) {
@@ -7332,7 +7332,7 @@ $global:UseInstanceMetadata = "{{GetVariable "useInstanceMetadata"}}"
 $global:LoadBalancerSku = "{{GetVariable "loadBalancerSku"}}"
 $global:ExcludeMasterFromStandardLB = "{{GetVariable "excludeMasterFromStandardLB"}}"
 
-$global:PrivateEgressProxyAddress = "{{PrivateEgressProxyAddress}}"
+$global:PrivateEgressProxyAddress = "{{GetPrivateEgressProxyAddress}}"
 
 # Windows defaults, not changed by aks-engine
 $global:CacheDir = "c:\akse-cache"
