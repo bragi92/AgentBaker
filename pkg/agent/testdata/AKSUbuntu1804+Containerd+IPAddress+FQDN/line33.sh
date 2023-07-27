@@ -57,7 +57,7 @@ if [[ "${DISABLE_SSH}" == "true" ]]; then
 fi
 
 # This involes using proxy, log the config before fetching packages
-echo "PRIVATE_EGRESS_PROXY_ADDRESS: ${PRIVATE_EGRESS_PROXY_ADDRESS}"
+echo "private egress proxy address is '${PRIVATE_EGRESS_PROXY_ADDRESS}'"
 # TODO update to use proxy
 
 if [[ "${SHOULD_CONFIGURE_HTTP_PROXY}" == "true" ]]; then
